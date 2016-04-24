@@ -1,52 +1,57 @@
+console.log("SW startup");
 var CACHE_NAME = 'shri-2016-task3-1';
-
 var urlsToCache = [
   '/',
-  '/index.css',
-  '/index.js'
+  'css/index.css',
+  'js/index.js',
+  '/index.html',
+  '/worker.js'
 ];
 
-self.addEventListener('install', (event) => {
+this.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(function(cache) {
+            .then(cache => {
                 return cache.addAll(urlsToCache);
             })
     );
 });
 
-self.addEventListener('fetch', function(event) {
+this.addEventListener('fetch', event => {
     const requestURL = new URL(event.request.url);
 
-    if (/^\/api\/v1/.test(requestURL.pathname)
-        && (event.request.method !== 'GET' && event.request.method !== 'HEAD')) {
+    if (
+        /^\/api\/v1/.test(requestURL.pathname)
+        && (event.request.method !== 'GET' && event.request.method !== 'HEAD')
+    ) {
         return event.respondWith(fetch(event.request));
     }
 
-    if (/^\/api\/v1/.test(requestURL.pathname)) {
+    if (
+        /^\/api\/v1/.test(requestURL.pathname)
+    ) {
         return event.respondWith(
-            Promise.race([
-                fetchAndPutToCache(event.request),
-                getFromCache(event.request)
-            ])
+            fetchAndPutToCache(event.request)
         );
     }
 
     return event.respondWith(
-        getFromCache(event.request).catch(fetchAndPutToCache);
+        getFromCache(event.request).catch(fetchAndPutToCache.bind(this, event.request))
     );
 });
 
 function fetchAndPutToCache(request) {
-    return fetch(request).then((response) => {
+    return fetch(request).then(response => {
         const responseToCache = response.clone();
-        return caches.open(CACHE_NAME)
-            .then((cache) => {
+        caches.open(CACHE_NAME)
+            .then(cache => {
                 cache.put(request, responseToCache);
             })
-            .then(() => response);
+        return response
     })
-    .catch(() => caches.match(request));
+    .catch(() => {
+        return getFromCache(request)
+    });
 }
 
 function getFromCache(request) {

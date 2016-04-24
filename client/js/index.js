@@ -1,4 +1,24 @@
 /* Application */
+const toggleEditButtons = (isActive) => {
+    console.log(isActive ? 'online' : 'offline');
+    [].forEach.call(document.querySelectorAll('.student__update-btn'),
+        btn => {
+            isActive ?
+                btn.removeAttribute('disabled') :
+                btn.setAttribute('disabled', !isActive)
+        }
+    )
+
+}
+
+const onLine = () => {
+    getStudents().then(updateStudentsList);
+    toggleEditButtons(true)
+}
+
+// работает только если выключить интернет в системе, если выключить через девтулзы, то нет
+window.addEventListener("online", onLine, false);
+window.addEventListener("offline", () => { toggleEditButtons(false) }, false);
 
 function getFormData(form) {
     return [].reduce.call(
@@ -207,7 +227,16 @@ function addStudent(student) {
             "Content-type": "application/json; charset=UTF-8"
         },
         body: JSON.stringify(student)
-    }).then(json);
+    }).then(json).catch((e) => {
+        return getStudents().then(students=>{
+            const newStudent = Object.assign({}, student, {
+                id: students.length + 1,
+                unSync: true
+            });
+            window.unSyncStudents.push();
+            return newStudent;
+        })
+    });
 }
 
 function updateStudent(student) {
@@ -245,4 +274,5 @@ document.addEventListener('DOMContentLoaded', (event) => {
     );
 
     getStudents().then(updateStudentsList);
+    window.unSyncStudents = [];
 });
